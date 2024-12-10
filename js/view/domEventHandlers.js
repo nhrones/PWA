@@ -62,7 +62,7 @@ export function initDOMelements () {
          const header = /** @type {HTMLElement} */(e.currentTarget)
          const indicator = /** @type {HTMLElement} */(header.querySelector('.indicator'))
          const index = parseInt(header.dataset.index + '')
-         const colName = kvCache.columns[index].name
+         const colName = /** @type {string} */(kvCache.columns[index].name)
          const currentOrder = kvCache.columns[index].order
 
          if (currentOrder == ASC) {

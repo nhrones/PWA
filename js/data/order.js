@@ -8,10 +8,10 @@ import { kvCache } from '../main.js'
 export const orderData = (column, direction) => {
    switch (direction) {
       case OrderDirection.ASC:
-         kvCache.querySet.sort((a, b) => a[column] > b[column] ? 1 : -1)
+         kvCache.querySet.sort((a, b) => a[column].toLowerCase() > b[column].toLowerCase() ? 1 : -1)
          break;
       case OrderDirection.DESC:
-         kvCache.querySet.sort((a, b) => a[column] < b[column] ? 1 : -1)
+         kvCache.querySet.sort((a, b) => a[column].toLowerCase() < b[column].toLowerCase() ? 1 : -1)
          break;
       default:
          break;
