@@ -1,5 +1,5 @@
 
-export const DEV = true
+export const DEV = false
 
 export const OrderDirection = {
    ASC: 'ASC',

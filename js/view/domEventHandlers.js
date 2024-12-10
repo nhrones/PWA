@@ -101,7 +101,6 @@ export function initDOMelements () {
 
    // popup close handler
    on(popupDialog, 'close', (event) => {
-      console.log('popupDialog close')
       event.preventDefault();
       if (!pinOK) ponDialog.showModal()
    });
@@ -116,10 +115,8 @@ export function initDOMelements () {
    // pin input keyup handler
    on(pinInput, 'keyup', (event) => {
       event.preventDefault()
-      console.log('pinInput key:', event.key)
       if (event.key === "Enter" || pinInput.value === "3913") {
          pinTryCount += 1
-         console.log('pinInput.value = ', pinInput.value)
          if (pinInput.value === "3913") {
             pinInput.value = ""
             pinOK = true
