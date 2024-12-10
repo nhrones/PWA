@@ -1,8 +1,12 @@
 import { DEV } from '../constants.js'
 import { kvCache } from '../main.js'
 export const CollectionName = 'PWA'
-export const DBServiceURL = "https://ndh-kv-rpc.deno.dev/" 
-//export const DBServiceURL = "http://localhost:9099/"
+
+// if in DEV mode we load from localhost + no pin
+export const DBServiceURL = ( DEV ) 
+   ? "http://localhost:9099/"
+   : "https://ndh-kv-rpc.deno.dev/" 
+
 export const RegistrationURL = DBServiceURL + "SSERPC/kvRegistration"
 
 let nextMsgID = 0;

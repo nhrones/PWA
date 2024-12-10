@@ -1,4 +1,4 @@
-import { OrderDirection } from '../constants.js'
+import { DEV, OrderDirection, PIN } from '../constants.js'
 import { $, on } from './utils.js'
 import { kvCache } from '../main.js'
 import { orderData } from '../data/order.js'
@@ -16,11 +16,8 @@ const { ASC, DESC } = OrderDirection
  * @function initDOMelements - initializes DOM objects and event handlers.
  */
 
-
-export const backupBtn = /** @type {HTMLButtonElement} */ ($("backupbtn"));
-export const restoreBtn = /** @type {HTMLButtonElement} */ ($("restorebtn"));
 export const popupDialog = /** @type {HTMLDialogElement} */ ($("popupDialog"));
-export const ponDialog = /** @type {HTMLDialogElement} */ ($("myDialog"));
+export const pinDialog = /** @type {HTMLDialogElement} */ ($("myDialog"));
 export const pinInput = /** @type {HTMLInputElement} */ ($("pin"));
 export const popupText = /** @type {HTMLElement} */ ($("popup_text"));
 
@@ -29,27 +26,10 @@ let pinOK = false
 const UP = '🔼'
 const DOWN = '🔽'
 
-/**
- * resets Order indicator elements
- */
-export const resetIndicators = () => {
-   const indicators = document.querySelectorAll('.indicator')
-   for (const indicator of Array.from(indicators)) {
-      const parent = /** @type {HTMLElement} */(indicator.parentElement);
-      /** @type {DOMStringMap} */
-      const { index } = /**@type {{index: string}}*/(parent.dataset)
-      kvCache.columns[index].order = OrderDirection.ASC
-      indicator.textContent = DOWN
-   }
-}
-export async function login() {
-    //return new Promise(resolve: () => void, reject: (reason?: any) => void))
-}
-
 /** 
  * Initialize DOM elements, and attach common event handlers 
  */
-export function initDOMelements () {
+export function initDOMelements() {
 
    // build the table head section first
    buildTableHead()
@@ -66,63 +46,68 @@ export function initDOMelements () {
          const currentOrder = kvCache.columns[index].order
 
          if (currentOrder == ASC) {
-            //resetIndicators()
             kvCache.columns[index].order = DESC
             orderData(colName, DESC)
             if (indicator) indicator.textContent = UP
          }
+
          else if (currentOrder == DESC) {
-            if (indicator) indicator.textContent = DOWN
             kvCache.columns[index].order = ASC
-            //resetIndicators()
             orderData(colName, ASC)
+            if (indicator) indicator.textContent = DOWN
          }
 
          buildDataTable()
       }
    }
 
-   //backup button click handler
-   on(backupBtn, 'click', () => {
-      backupData()
-   })
-
-   // restore button click handler
-   on(restoreBtn, 'click', () => {
-      restoreData()
-   })
-
+   // We've added key commands for backup and restore
+   document.addEventListener('keydown', function (event) {
+      if (event.ctrlKey && event.key === 'b') {
+         event.preventDefault();
+         console.log('Ctrl + B backup data');
+         backupData()
+      }
+      if (event.ctrlKey && event.key === 'r') {
+         event.preventDefault();
+         console.log('Ctrl + R restore data');
+         restoreData()
+      }
+   });
 
    // popup click handler
+   // this closes the msg popup
    on(popupDialog, 'click', (event) => {
       event.preventDefault();
       popupDialog.close();
    });
 
    // popup close handler
+   // we reopen the pin input dialog
    on(popupDialog, 'close', (event) => {
       event.preventDefault();
-      if (!pinOK) ponDialog.showModal()
+      if (!pinOK) pinDialog.showModal()
    });
 
-   // popup keyup handler
+   // popup keyup handler -> any key to close
    on(popupDialog, "keyup", (evt) => {
       evt.preventDefault()
       popupDialog.close()
-      if (!pinOK) ponDialog.showModal()
+      if (!pinOK) pinDialog.showModal()
    });
 
    // pin input keyup handler
    on(pinInput, 'keyup', (event) => {
       event.preventDefault()
-      if (event.key === "Enter" || pinInput.value === "3913") {
+      if (event.key === "Enter" || pinInput.value === PIN) {
          pinTryCount += 1
-         if (pinInput.value === "3913") {
+         if (pinInput.value === PIN) {
             pinInput.value = ""
             pinOK = true
-            ponDialog.close()
+            pinDialog.close()
+            orderData('host','ASC')
          } else {
-            ponDialog.close()
+            pinDialog.close()
             pinInput.value = ""
             pinOK = false
             popupText.textContent = (pinTryCount === 3)
@@ -141,16 +126,13 @@ export function initDOMelements () {
       }
    })
 
-
-   // check search param to bypass pin input
-   if (globalThis.location.search !== '?ndh') {
-      // initial pin input
-      ponDialog.showModal()
-      pinInput.focus({ focusVisible: true })
-   } else {
+   if (DEV) { // bypass pin input
       pinOK = true
+   } else {
+      // initial pin input
+      pinDialog.showModal()
+      pinInput.focus({ focusVisible: true })
    }
-
 }
 
 /**
@@ -158,7 +140,7 @@ export function initDOMelements () {
  * @returns void - calls saveDataFile()
  */
 export function backupData() {
-   // get all todo records
+   // get all records
    const jsonData = JSON.stringify(Array.from(kvCache.dbMap.entries()))
    const link = document.createElement("a");
    const file = new Blob([jsonData], { type: 'application/json' });

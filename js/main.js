@@ -1,7 +1,6 @@
-
+import { DEV } from './constants.js'
 import { initDOMelements } from './view/domEventHandlers.js'
 import { KvCache } from './data/kvCache.js'
-
 
 /** 
  * A DB options object 
@@ -25,9 +24,8 @@ const options = {
 /** 
  * If a dataset of this size already exists in IDB, open it.   
  * Else, create a new dataset of this size and persist it to IDB.   
- * @param object options - the schema and size of the test dataset.
- * @returns -
- * */
+ * @param object options - the schema for the dataset.
+ */
 export const kvCache = new KvCache(options)
 
 /**
@@ -38,12 +36,7 @@ await initDOMelements()
 
 // initial data fetch and hydrate
 const result = kvCache.hydrate()
-// no data found in IDB
-if (result === null) {
-   const h1 = document.getElementById('h1')
-   if (h1) {
-      h1.textContent = `Loading dataset! Please Wait!`
-      h1.className = 'h1'
-   }
-   alert('No data!')
+console.log(result)
+if (DEV && result =='Not found') {
+   alert("In DEV please start local service!")
 }

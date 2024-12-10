@@ -57,7 +57,7 @@ export const buildDataTable = () => {
    const querySet = kvCache.querySet
   
    tableBody.innerHTML = '';
-    /** @type {HTMLHtmlElement} */($('h1')).className = 'hidden'
+
    if (querySet) {
       for (let i = 0; i < querySet.length; i++) {
          const obj = querySet[i]

@@ -3,7 +3,9 @@ import { buildDataTable } from '../view/domDataTable.js'
 import { KvClient } from './kvClient.js'
 import { DEV } from '../constants.js'
 
-/** This `In-Memory-cache` leverages ES6-Maps. */
+/** 
+ * This `In-Memory-cache` leverages ES6-Maps. 
+ */
 export class KvCache {
 
    IDB_KEY = ''
@@ -31,10 +33,8 @@ export class KvCache {
    constructor(opts) {
       this.IDB_KEY = `${opts.schema.name}`
       this.schema = opts.schema
-      //this.dbWorker = new Worker('./js/kvdbWorker.js')
       this.callbacks = new Map()
       this.columns = this.buildColumnSchema(this.schema.sample)
-
       this.kvClient = new KvClient()
       this.kvClient.init()
    }
@@ -78,7 +78,7 @@ export class KvCache {
       this.raw = [...this.dbMap.values()]
       this.querySet = [...this.raw]
       buildDataTable()
-      return "ok"
+      return (this.querySet.length > 2)? "ok" : 'Not found'
    }
 
    /** resest the working querySet to original DB values */
