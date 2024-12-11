@@ -1,6 +1,7 @@
 import { DEV, OrderDirection, PIN } from '../constants.js'
 import { $, on } from './utils.js'
 import { kvCache } from '../main.js'
+import { restoreCache } from '../data/kvClient.js'
 import { orderData } from '../data/order.js'
 import { buildDataTable, buildTableHead } from './domDataTable.js'
 
@@ -65,12 +66,12 @@ export function initDOMelements() {
    document.addEventListener('keydown', function (event) {
       if (event.ctrlKey && event.key === 'b') {
          event.preventDefault();
-         console.log('Ctrl + B backup data');
+         if (DEV) console.log('Ctrl + B backup data');
          backupData()
       }
       if (event.ctrlKey && event.key === 'r') {
          event.preventDefault();
-         console.log('Ctrl + R restore data');
+         if (DEV) console.log('Ctrl + R restore data');
          restoreData()
       }
    });
@@ -96,6 +97,12 @@ export function initDOMelements() {
       if (!pinOK) pinDialog.showModal()
    });
 
+   pinDialog.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+          event.preventDefault();
+      }
+  });
+
    // pin input keyup handler
    on(pinInput, 'keyup', (event) => {
       event.preventDefault()
@@ -105,7 +112,6 @@ export function initDOMelements() {
             pinInput.value = ""
             pinOK = true
             pinDialog.close()
-            orderData('host','ASC')
          } else {
             pinDialog.close()
             pinInput.value = ""
@@ -148,16 +154,6 @@ export function backupData() {
    link.download = "backup.json";
    link.click();
    URL.revokeObjectURL(link.href);
-}
-
-/**
- * restore our cache from a json backup
- * @param {string} records
- */
-export function restoreCache(records) {
-   const tasksObj = JSON.parse(records)
-   kvCache.dbMap = new Map(tasksObj)
-   kvCache.persist(kvCache.dbMap)
 }
 
 /**

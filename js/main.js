@@ -32,11 +32,4 @@ export const kvCache = new KvCache(options)
  * Initialize the DataTable UI
  * This will setup for async dataload and paginate in DB-ctor
  */
-await initDOMelements()
-
-// initial data fetch and hydrate
-const result = kvCache.hydrate()
-console.log(result)
-if (DEV && result =='Not found') {
-   alert("In DEV please start local service!")
-}
+initDOMelements()

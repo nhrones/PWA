@@ -78,7 +78,7 @@ export class KvCache {
       this.raw = [...this.dbMap.values()]
       this.querySet = [...this.raw]
       buildDataTable()
-      return (this.querySet.length > 2)? "ok" : 'Not found'
+      return (this.raw.length > 2)? "ok" : 'Not found'
    }
 
    /** resest the working querySet to original DB values */

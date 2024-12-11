@@ -1,4 +1,4 @@
-import { OrderDirection } from '../constants.js'
+import { DEV, OrderDirection } from '../constants.js'
 import { kvCache } from '../main.js'
 
 /** Reorder our dataset 
@@ -6,24 +6,17 @@ import { kvCache } from '../main.js'
  * @param {string} direction
  */
 export const orderData = (column, direction) => {
+   if (DEV) console.log('running order for', column)
    switch (direction) {
       case OrderDirection.ASC:
+         if (DEV) console.log('running order-ASC for', column)
          kvCache.querySet.sort((a, b) => a[column].toLowerCase() > b[column].toLowerCase() ? 1 : -1)
          break;
       case OrderDirection.DESC:
+         if (DEV) console.log('running order-DESC for', column)
          kvCache.querySet.sort((a, b) => a[column].toLowerCase() < b[column].toLowerCase() ? 1 : -1)
          break;
       default:
          break;
-   }
-}
-
-/** apply any existing sort order */
-export const applyOrder = () => {
-   const indicators = document.querySelectorAll('.indicator')
-   for (const ind of Array.from(indicators)) {
-      const index = parseInt(ind?.parentElement?.dataset.index + '')
-      const dir = kvCache.columns[index].order
-      orderData(kvCache.columns[index].name, dir)
    }
 }

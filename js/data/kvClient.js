@@ -1,6 +1,8 @@
-import { DEV } from '../constants.js'
+import { CollectionName, DEV, OrderDirection } from '../constants.js'
 import { kvCache } from '../main.js'
-export const CollectionName = 'PWA'
+import { buildDataTable } from '../view/domDataTable.js'
+import { orderData } from './order.js'
+
 
 // if in DEV mode we load from localhost + no pin
 export const DBServiceURL = ( DEV ) 
@@ -178,7 +180,10 @@ export const callProcedure = (
 export function restoreCache(records) {
    const tasksObj = JSON.parse(records)
    kvCache.dbMap = new Map(tasksObj)
-   kvCache.persist(kvCache.dbMap)
    if (DEV) console.log("Restored Cache from Kv")
-   kvCache.hydrate()
+   const result =kvCache.hydrate()
+   if (result == 'ok') {
+      orderData('host', OrderDirection.ASC)
+      buildDataTable()
+   }
 }
