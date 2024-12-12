@@ -3,7 +3,7 @@ var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
 // src/constants.ts
-var DEV = true;
+var DEV = false;
 var PIN = "3913";
 var CollectionName = "PWA";
 var OrderDirection = {
