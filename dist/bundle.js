@@ -4,8 +4,8 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 
 // src/constants.ts
 var DEV = false;
-var PIN = "3913";
-var CollectionName = "PWA";
+var PIN = "";
+var setPin = /* @__PURE__ */ __name((pin) => PIN = pin, "setPin");
 var OrderDirection = {
   ASC: "ASC",
   DESC: "DESC"
@@ -186,7 +186,12 @@ var KvClient = class {
     console.log("CONNECTING");
     eventSource.addEventListener("open", () => {
       console.log("events.onopen - CONNECTED");
-      this.fetchQuerySet();
+      callProcedure("GET", { key: ["PIN"] }).then((result) => {
+        console.info(result);
+        setPin(result.value);
+        if (DEV) console.log("Got kvPIN: " + result.value);
+        this.fetchQuerySet();
+      });
     });
     eventSource.addEventListener("error", (_e) => {
       switch (eventSource.readyState) {
@@ -222,11 +227,24 @@ var KvClient = class {
     console.info(`Mutation event:`, result);
   }
   /** fetch a querySet */
+  async setKvPin(pin) {
+    if (DEV) console.log("Fetching Pin!");
+    await callProcedure(
+      "SET",
+      {
+        key: ["PIN"],
+        value: pin
+      }
+    ).then((result) => {
+      if (DEV) console.log("Set PIN! " + result);
+    });
+  }
+  /** fetch a querySet */
   async fetchQuerySet() {
     if (DEV) console.log("Fetching data!");
-    await callProcedure("GET", { collection: CollectionName, size: 1 }).then((result) => {
-      if (DEV) console.log("Got result! ");
-      restoreCache(result.value);
+    await callProcedure("GET", { key: ["PWA"] }).then((result) => {
+      if (DEV) console.log("Got result! ", result.value);
+      restoreCache(result.value, "kvClient.fetchQuerySet");
     });
   }
   /** get row from key */
@@ -237,13 +255,12 @@ var KvClient = class {
     }
   }
   /** The `set` method mutates - will call the `persist` method. */
-  set(key, value) {
+  set(value) {
     try {
       callProcedure(
         "SET",
         {
-          collection: CollectionName,
-          id: key,
+          key: ["PWA"],
           value
         }
       ).then((result) => {
@@ -257,7 +274,7 @@ var KvClient = class {
 };
 var callProcedure = /* @__PURE__ */ __name((procedure, params) => {
   const txID = nextMsgID++;
-  if (DEV) console.log(`RPC msg ${txID} called ${procedure}`);
+  if (DEV) console.log(`RPC msg ${txID} called ${procedure} with ${params}`);
   return new Promise((resolve, reject) => {
     transactions.set(txID, (error, result) => {
       if (error)
@@ -271,10 +288,11 @@ var callProcedure = /* @__PURE__ */ __name((procedure, params) => {
     });
   });
 }, "callProcedure");
-function restoreCache(records) {
+function restoreCache(records, from) {
+  if (DEV) console.log(`kvClient restoreCache called from ${from}`);
   const tasksObj = JSON.parse(records);
   kvCache.dbMap = new Map(tasksObj);
-  if (DEV) console.log("Restored Cache from Kv");
+  if (DEV) console.log(`kvCache restored!`);
   const result = kvCache.hydrate();
   if (result == "ok") {
     orderData("host", OrderDirection.ASC);
@@ -410,7 +428,7 @@ function restoreData() {
   fileload?.addEventListener("change", function() {
     const reader = new FileReader();
     reader.onload = function() {
-      restoreCache(reader.result);
+      restoreCache(reader.result, "domEventHandlers.restoreData");
       globalThis.location.reload();
     };
     reader.readAsText(fileload.files[0]);
@@ -468,7 +486,7 @@ var KvCache = class {
   persist(map) {
     if (DEV) console.log(`persist called! `);
     const valueString = JSON.stringify(Array.from(map.entries()));
-    this.kvClient.set(["PWA"], valueString);
+    this.kvClient.set(valueString);
   }
   /** hydrate a dataset from a single raw record stored in kvDB */
   hydrate() {
