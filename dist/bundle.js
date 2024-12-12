@@ -187,7 +187,8 @@ var KvClient = class {
     eventSource.addEventListener("open", () => {
       console.log("events.onopen - CONNECTED");
       callProcedure("GET", { key: ["PIN"] }).then((result) => {
-        setPin(result.value);
+        const pin = xorEncrypt(atob(result.value));
+        setPin(pin);
         this.fetchQuerySet();
       });
     });
@@ -225,7 +226,8 @@ var KvClient = class {
     console.info(`Mutation event:`, result.type);
   }
   /** fetch a querySet */
-  async setKvPin(pin) {
+  async setKvPin(rawpin) {
+    const pin = btoa(xorEncrypt(rawpin));
     if (DEV) console.log("Setting Pin!");
     await callProcedure(
       "SET",
@@ -290,6 +292,7 @@ function restoreCache(records, from) {
   if (DEV) console.log(`kvClient restoreCache called from ${from}`);
   const tasksObj = JSON.parse(records);
   kvCache.dbMap = new Map(tasksObj);
+  kvCache.persist();
   if (DEV) console.log(`kvCache restored!`);
   const result = kvCache.hydrate();
   if (result == "ok") {
@@ -298,6 +301,15 @@ function restoreCache(records, from) {
   }
 }
 __name(restoreCache, "restoreCache");
+function xorEncrypt(text) {
+  let result = "";
+  const key = "ndhg";
+  for (let i = 0; i < text.length; i++) {
+    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return result;
+}
+__name(xorEncrypt, "xorEncrypt");
 
 // src/view/domEventHandlers.ts
 var { ASC, DESC } = OrderDirection;
@@ -466,9 +478,9 @@ var KvCache = class {
    * our webworker. (takes ~ 90 ms for 100k records)    
    * This is called for any mutation of the dbMap (set/delete)
    */
-  persist(map) {
+  persist() {
     if (DEV) console.log(`persist called! `);
-    const valueString = JSON.stringify(Array.from(map.entries()));
+    const valueString = JSON.stringify(Array.from(this.dbMap.entries()));
     this.kvClient.set(valueString);
   }
   /** hydrate a dataset from a single raw record stored in kvDB */
@@ -487,7 +499,7 @@ var KvCache = class {
     if (DEV) console.log(`${from} set key ${key} val ${JSON.stringify(value)}`);
     try {
       this.dbMap.set(key, value);
-      this.persist(this.dbMap);
+      this.persist();
       this.hydrate();
       return key.toString();
     } catch (e) {
@@ -504,14 +516,11 @@ var KvCache = class {
       return "Error " + e;
     }
   }
-  /** The `delete` method mutates - will call the `persist` method.
-   * @param {number} key
-   * @returns {*}
-   */
+  /** The `delete` method mutates - will call the `persist` method. */
   delete(key) {
     try {
       const result = this.dbMap.delete(key);
-      if (result === true) this.persist(this.dbMap);
+      if (result === true) this.persist();
       this.hydrate();
       return result;
     } catch (e) {
