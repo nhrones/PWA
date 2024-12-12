@@ -1,9 +1,10 @@
-import { DEV, OrderDirection, PIN } from '../constants.js'
-import { $, on } from './utils.js'
-import { kvCache } from '../main.js'
-import { restoreCache } from '../data/kvClient.js'
-import { orderData } from '../data/order.js'
-import { buildDataTable, buildTableHead } from './domDataTable.js'
+// deno-lint-ignore-file no-explicit-any
+import { DEV, OrderDirection, PIN } from '../constants.ts'
+import { $, on } from './utils.ts'
+import { kvCache } from '../main.ts'
+import { restoreCache } from '../data/kvClient.ts'
+import { orderData } from '../data/order.ts'
+import { buildDataTable, buildTableHead } from './domDataTable.ts'
 
 
 const { ASC, DESC } = OrderDirection
@@ -38,10 +39,10 @@ export function initDOMelements() {
    // assign click handlers for column headers
    for (let i = 0; i < kvCache.columns.length; i++) {
 
-      const el = /** @type {HTMLElement} */($(`header${i + 1}`))
+      const el = $(`header${i + 1}`) as HTMLElement
       el.onclick = (e) => {
-         const header = /** @type {HTMLElement} */(e.currentTarget)
-         const indicator = /** @type {HTMLElement} */(header.querySelector('.indicator'))
+         const header = e.currentTarget as HTMLElement 
+         const indicator = header.querySelector('.indicator')
          const index = parseInt(header.dataset.index + '')
          const colName = /** @type {string} */(kvCache.columns[index].name)
          const currentOrder = kvCache.columns[index].order
@@ -78,45 +79,51 @@ export function initDOMelements() {
 
    // popup click handler
    // this closes the msg popup
-   on(popupDialog, 'click', (event) => {
+   on(popupDialog, 'click', (event: { preventDefault: () => void; }) => {
       event.preventDefault();
+      //@ts-ignore ?
       popupDialog.close();
    });
 
    // popup close handler
    // we reopen the pin input dialog
-   on(popupDialog, 'close', (event) => {
+   on(popupDialog, 'close', (event: { preventDefault: () => void; }) => {
       event.preventDefault();
+      //@ts-ignore ?
       if (!pinOK) pinDialog.showModal()
    });
 
    // popup keyup handler -> any key to close
-   on(popupDialog, "keyup", (evt) => {
-      evt.preventDefault()
+   on(popupDialog, "keyup", (event: { preventDefault: () => void; }) => {
+      event.preventDefault()
+      //@ts-ignore ?
       popupDialog.close()
+      //@ts-ignore ?
       if (!pinOK) pinDialog.showModal()
    });
 
-   pinDialog.addEventListener('keydown', (event) => {
+   pinDialog?.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
           event.preventDefault();
       }
   });
 
    // pin input keyup handler
-   on(pinInput, 'keyup', (event) => {
+   on(pinInput, 'keyup', (event: any) => {
       event.preventDefault()
-      if (event.key === "Enter" || pinInput.value === PIN) {
+      const pinIn = pinInput as HTMLInputElement
+      const pinDia = pinDialog as HTMLDialogElement
+      if (event.key === "Enter" || pinIn.value === PIN) {
          pinTryCount += 1
-         if (pinInput.value === PIN) {
-            pinInput.value = ""
+         if (pinIn.value === PIN) {
+            pinIn.value = ""
             pinOK = true
-            pinDialog.close()
+            pinDia.close()
          } else {
-            pinDialog.close()
-            pinInput.value = ""
+            pinDia.close()
+            pinIn.value = ""
             pinOK = false
-            popupText.textContent = (pinTryCount === 3)
+            if (popupText) popupText.textContent = (pinTryCount === 3)
                ? `Incorrect pin entered ${pinTryCount} times!
  Please close this Page!`
                : `Incorrect pin entered ${pinTryCount} times!`
@@ -126,7 +133,7 @@ export function initDOMelements() {
                <h1>Three failed PIN attempts!</h1>
                <h1>Please close this page!</h1>`
             } else {
-               popupDialog.showModal()
+               (popupDialog as HTMLDialogElement).showModal()
             }
          }
       }
@@ -136,8 +143,9 @@ export function initDOMelements() {
       pinOK = true
    } else {
       // initial pin input
-      pinDialog.showModal()
-      pinInput.focus({ focusVisible: true })
+      (pinDialog as HTMLDialogElement).showModal();
+      //@ts-ignore ?
+      (pinInput as HTMLDialogElement).focus({ focusVisible: true })
    }
 }
 
@@ -166,9 +174,10 @@ export function restoreData() {
    fileload?.addEventListener('change', function () {
       const reader = new FileReader();
       reader.onload = function () {
-         restoreCache(reader.result)
+         restoreCache(reader.result as string)
          globalThis.location.reload()
       }
+      //@ts-ignore ?/
       reader.readAsText(fileload.files[0]);
    })
 }

@@ -1,27 +1,15 @@
-import { $ } from './utils.js'
-import { makeEditableRow, resetFocusedRow } from './editableTR.js'
-import { buildFooter, } from './domFooter.js'
-import { kvCache } from '../main.js'
+import { $ } from './utils.ts'
+import { makeEditableRow, resetFocusedRow } from './editableTR.ts'
+import { buildFooter, } from './domFooter.ts'
+import { kvCache } from '../main.ts'
 
-
-/** @type {HTMLTableSectionElement} */
-let tableBody
-
-/**
- * Capitalize First Letter
- *
- * @param {string} str the string to capitalize
- * @returns {string} capitalized string
- */
-//function capitalizeFirstLetter(str) {
-   //return str //.charAt(0).toUpperCase() + str.slice(1);
-//}
+let tableBody: HTMLTableSectionElement
 
 /** 
  * Build the Table header
  */
 export const buildTableHead = () => {
-   const tablehead = /** @type {HTMLTableSectionElement} */ ($('table-head'))
+   const tablehead = $('table-head') as HTMLTableSectionElement
    const tr = `
 <tr class="headerRow">
 `;
@@ -51,7 +39,7 @@ export const buildTableHead = () => {
 export const buildDataTable = () => {
 
    if (!tableBody) {
-      tableBody = /** @type {HTMLTableSectionElement} */($('table-body'))
+      tableBody = $('table-body') as HTMLTableSectionElement
    }
 
    const querySet = kvCache.querySet

@@ -1,36 +1,24 @@
+// deno-lint-ignore-file no-explicit-any
 
-import { buildDataTable } from '../view/domDataTable.js'
-import { KvClient } from './kvClient.js'
-import { DEV } from '../constants.js'
+import { buildDataTable } from '../view/domDataTable.ts'
+import { KvClient } from './kvClient.ts'
+import { DEV } from '../constants.ts'
 
-/** 
- * This `In-Memory-cache` leverages ES6-Maps. 
- */
+/**  This `In-Memory-cache` leverages ES6-Maps. */
 export class KvCache {
 
    IDB_KEY = ''
    schema
    nextMsgID = 0
+   querySet: any[] = []
+   callbacks: Map<string, any>
+   columns: any[] = []
+   kvClient: KvClient
+   dbMap: Map<number, string> = new Map()
+   raw: any[] = []
 
-   /** @type {any[]} */
-   querySet = []
-
-   /** @type {string | any[]} */
-   columns = []
-
-   /** @type {any} */
-   kvClient
-
-   /** @type {Map<number, string>} dbMap */
-   dbMap = new Map()
-
-   /** @type {any[]} */
-   raw = []
-
-   /** ctor
-    * @param {{ schema: {  name: string, sample: {[key: string]: any}}, size: number; }} opts
-    */
-   constructor(opts) {
+   /** ctor */
+   constructor(opts: { schema: any; }) {
       this.IDB_KEY = `${opts.schema.name}`
       this.schema = opts.schema
       this.callbacks = new Map()
@@ -41,9 +29,8 @@ export class KvCache {
 
    /**
     * extract a set of column-schema from the DB.schema object
-    * @param {{ [s: string]: any; } | ArrayLike<any>} obj
     */
-   buildColumnSchema(obj) {
+   buildColumnSchema(obj: { [s: string]: unknown; } | ArrayLike<unknown>) {
       const columns = []
       for (const [key, value] of Object.entries(obj)) {
          let read_only = false;
@@ -65,9 +52,8 @@ export class KvCache {
     * Persist the current dbMap to an IndexedDB using         
     * our webworker. (takes ~ 90 ms for 100k records)    
     * This is called for any mutation of the dbMap (set/delete)
-    * @param {Map<number, any>} map
     */
-   persist(map) {
+   persist(map: Map<number, any>) {
       if (DEV) console.log(`persist called! `)
       const valueString = JSON.stringify(Array.from(map.entries()))
       this.kvClient.set(["PWA"], valueString)
@@ -86,13 +72,8 @@ export class KvCache {
       this.querySet = [...this.raw]
    }
 
-   /** The `set` method mutates - will call the `persist` method.
-    * @param {number} key
-    * @param {any} value
-    * @param {string} from
-    * @returns {string}
-    */
-   set(key, value, from) {
+   /** The `set` method mutates - will call the `persist` method. */
+   set(key: number, value: any, from: string) {
       if (DEV) console.log(`${from} set key ${key} val ${JSON.stringify(value)}`)
       try {
          this.dbMap.set(key, value)
@@ -105,11 +86,8 @@ export class KvCache {
       }
    }
 
-   /** The `get` method will not mutate records
-    * @param {number} key
-    * @returns {*}
-    */
-   get(key) {
+   /** The `get` method will not mutate records */
+   get(key: number) {
       try {
          const result = this.dbMap.get(key)
          return result
@@ -122,7 +100,7 @@ export class KvCache {
     * @param {number} key
     * @returns {*}
     */
-   delete(key) {
+   delete(key: number) {
       try {
          const result = this.dbMap.delete(key)
          if (result === true) this.persist(this.dbMap)

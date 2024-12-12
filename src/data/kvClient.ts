@@ -1,7 +1,8 @@
-import { CollectionName, DEV, OrderDirection } from '../constants.js'
-import { kvCache } from '../main.js'
-import { buildDataTable } from '../view/domDataTable.js'
-import { orderData } from './order.js'
+// deno-lint-ignore-file no-explicit-any
+import { CollectionName, DEV, OrderDirection } from '../constants.ts'
+import { kvCache } from '../main.ts'
+import { buildDataTable } from '../view/domDataTable.ts'
+import { orderData } from './order.ts'
 
 
 // if in DEV mode we load from localhost + no pin
@@ -27,10 +28,9 @@ const transactions = new Map();
  */
 export class KvClient {
 
-   schema
+   schema: any
    nextMsgID = 0
-   /** @type {string | any[] | PromiseLike<any[]>} */
-   querySet = []
+   querySet: any[] = []
    transactions
    currentPage = 1
    focusedRow = null
@@ -87,39 +87,30 @@ export class KvClient {
     * handle Mutation Event
     * @param {{ rowID: any; type: any; }} result
     */
-   handleMutation(result) {
+   handleMutation(result: { rowID: any; type: any; } ) {
       console.info(`Mutation event:`, result)
    }
 
-   /**
-    * fetch a querySet
-    */
+   /** fetch a querySet */
    async fetchQuerySet() {
       if (DEV) console.log('Fetching data!')
       await callProcedure("GET", { collection: CollectionName, size: 1 })
-         .then((result) => {
+         .then((result: any) => {
             if (DEV) console.log('Got result! ')
             restoreCache(result.value)
          })
    }
 
-   /**
-    * get row from key
-    * @param {any} key
-    */
-   get(key) {
+   /** get row from key */
+   get(key: any) {
       for (let index = 0; index < this.querySet.length; index++) {
          const element = this.querySet[index];
          if (element.id === key) return element
       }
    }
 
-   /**
-    * The `set` method mutates - will call the `persist` method.
-    * @param {any} key
-    * @param {any} value
-    */
-   set(key, value) {
+   /** The `set` method mutates - will call the `persist` method. */
+   set(key: any, value: any) {
       try {
          // persist single record to the service
          callProcedure("SET",
@@ -128,7 +119,7 @@ export class KvClient {
                id: key,
                value: value
             })
-            .then((result) => {
+            .then((result: any) => {
                this.querySet = result.querySet
                return this.querySet
             })
@@ -151,16 +142,16 @@ export class KvClient {
  *   and executed by the promise. 
  */
 export const callProcedure = (
-   procedure,
-   params
-) => {
+   procedure: any,
+   params: any
+): Promise<any> => {
 
    const txID = nextMsgID++;
 
    if (DEV) console.log(`RPC msg ${txID} called ${procedure}`);
 
    return new Promise((resolve, reject) => {
-      transactions.set(txID, (/** @type {string | undefined} */ error, /** @type {any} */ result) => {
+      transactions.set(txID, ( error: string | undefined, result: any) => {
          if (error)
             return reject(new Error(error));
          resolve(result);
@@ -173,11 +164,8 @@ export const callProcedure = (
    });
 };
 
-/**
- * restores our cache from a json string
- * @param {string} records
- */
-export function restoreCache(records) {
+/** restores our cache from a json string */
+export function restoreCache(records: string) {
    const tasksObj = JSON.parse(records)
    kvCache.dbMap = new Map(tasksObj)
    if (DEV) console.log("Restored Cache from Kv")

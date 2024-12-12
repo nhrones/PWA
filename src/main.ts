@@ -1,6 +1,7 @@
-import { DEV } from './constants.js'
-import { initDOMelements } from './view/domEventHandlers.js'
-import { KvCache } from './data/kvCache.js'
+/// <reference lib="dom" />
+
+import { initDOMelements } from './view/domEventHandlers.ts'
+import { KvCache } from './data/kvCache.ts'
 
 /** 
  * A DB options object 

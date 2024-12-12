@@ -1,11 +1,8 @@
-import { DEV, OrderDirection } from '../constants.js'
-import { kvCache } from '../main.js'
+import { DEV, OrderDirection } from '../constants.ts'
+import { kvCache } from '../main.ts'
 
-/** Reorder our dataset 
- * @param {string} column
- * @param {string} direction
- */
-export const orderData = (column, direction) => {
+/** Reorder our dataset */
+export const orderData = (column: string, direction: string) => {
    if (DEV) console.log('running order for', column)
    switch (direction) {
       case OrderDirection.ASC:

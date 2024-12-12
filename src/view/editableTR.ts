@@ -1,5 +1,6 @@
-import { $ } from './utils.js'
-import { kvCache } from '../main.js'
+// deno-lint-ignore-file no-explicit-any
+import { $ } from './utils.ts'
+import { kvCache } from '../main.ts'
 
 /** 
  * @module editableTR
@@ -10,19 +11,17 @@ import { kvCache } from '../main.js'
  * @function makeEditableRow - build table row event handlers for editing
  */
 
-/** @type {HTMLTableRowElement | null} */
-export let focusedRow
+export let focusedRow: HTMLTableRowElement | null
 
-/** @type {HTMLTableCellElement} */
-export let focusedCell
+export let focusedCell: HTMLTableCellElement
 
 export let selectedRowID = 0
 
 
 /** reset any focused row */
 export const resetFocusedRow = () => {
-   const dbtn = /**@type {HTMLButtonElement} */($('deletebtn'))
-   const abtn = /**@type {HTMLButtonElement} */($('addbtn'))
+   const dbtn = $('deletebtn') as HTMLButtonElement;
+   const abtn = $('addbtn') as HTMLButtonElement;
    dbtn.setAttribute('hidden',"")
    abtn.removeAttribute('hidden')
    focusedRow = null
@@ -39,7 +38,7 @@ export function makeEditableRow() {
 
         row.onclick = (e) => {
 
-            const target = /** @type {HTMLTableCellElement} */(e.target)
+            const target = e.target as HTMLTableCellElement
             if (focusedRow && focusedCell && (e.target != focusedCell)) {
                focusedCell.removeAttribute('contenteditable')
                 focusedCell.className = ""
@@ -51,10 +50,10 @@ export function makeEditableRow() {
             selectedRowID = parseInt(focusedRow.dataset.row_id+'')
             focusedRow.classList.add("selected_row")
 
-            const abtn = /**@type {HTMLButtonElement} */($('addbtn'))
+            const abtn = $('addbtn') as HTMLButtonElement;
             abtn.setAttribute('hidden',"")
             
-            const dbtn = /**@type {HTMLButtonElement} */($('deletebtn'))
+            const dbtn = $('deletebtn') as HTMLButtonElement;
             dbtn.removeAttribute('hidden')
 
             // we don't allow editing readonly cells
@@ -62,13 +61,13 @@ export function makeEditableRow() {
                 return // skip all read-only columns
             }
     
-            focusedCell = /** @type {HTMLTableCellElement} */(e.target)
+            focusedCell = e.target as HTMLTableCellElement
             focusedCell.setAttribute('contenteditable', '')
             focusedCell.className = "editable "
             focusedCell.onblur = () => {
-                const id = parseInt(/**@type {HTMLTableRowElement}*/(focusedRow).dataset.row_id+'')
+                const id = parseInt((focusedRow as HTMLTableRowElement).dataset.row_id+'')
                 const col = focusedCell.dataset.column_id || 0
-                const rowObj = kvCache.get(id)
+                const rowObj: any = kvCache.get(id)
                 const currentValue = rowObj[col]
                 const newValue = focusedCell.textContent
                 if (currentValue != newValue) {
