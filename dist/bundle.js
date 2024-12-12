@@ -187,9 +187,7 @@ var KvClient = class {
     eventSource.addEventListener("open", () => {
       console.log("events.onopen - CONNECTED");
       callProcedure("GET", { key: ["PIN"] }).then((result) => {
-        console.info(result);
         setPin(result.value);
-        if (DEV) console.log("Got kvPIN: " + result.value);
         this.fetchQuerySet();
       });
     });
@@ -224,26 +222,26 @@ var KvClient = class {
    * @param {{ rowID: any; type: any; }} result
    */
   handleMutation(result) {
-    console.info(`Mutation event:`, result);
+    console.info(`Mutation event:`, result.type);
   }
   /** fetch a querySet */
   async setKvPin(pin) {
-    if (DEV) console.log("Fetching Pin!");
+    if (DEV) console.log("Setting Pin!");
     await callProcedure(
       "SET",
       {
         key: ["PIN"],
         value: pin
       }
-    ).then((result) => {
-      if (DEV) console.log("Set PIN! " + result);
+    ).then((_result) => {
+      if (DEV) console.log("Set PIN!");
     });
   }
   /** fetch a querySet */
   async fetchQuerySet() {
     if (DEV) console.log("Fetching data!");
     await callProcedure("GET", { key: ["PWA"] }).then((result) => {
-      if (DEV) console.log("Got result! ", result.value);
+      if (DEV) console.log("Got result! ", result.key);
       restoreCache(result.value, "kvClient.fetchQuerySet");
     });
   }
@@ -508,7 +506,7 @@ var KvCache = class {
       this.hydrate();
       return key.toString();
     } catch (e) {
-      console.error("error putting ");
+      console.error("error setting ");
       return "Error " + e;
     }
   }
