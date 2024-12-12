@@ -301,22 +301,10 @@ __name(restoreCache, "restoreCache");
 
 // src/view/domEventHandlers.ts
 var { ASC, DESC } = OrderDirection;
-var popupDialog = (
-  /** @type {HTMLDialogElement} */
-  $("popupDialog")
-);
-var pinDialog = (
-  /** @type {HTMLDialogElement} */
-  $("myDialog")
-);
-var pinInput = (
-  /** @type {HTMLInputElement} */
-  $("pin")
-);
-var popupText = (
-  /** @type {HTMLElement} */
-  $("popup_text")
-);
+var popupDialog = $("popupDialog");
+var pinDialog = $("myDialog");
+var pinInput = $("pin");
+var popupText = $("popup_text");
 var pinTryCount = 0;
 var pinOK = false;
 var UP = "\u{1F53C}";
@@ -329,10 +317,7 @@ function initDOMelements() {
       const header = e.currentTarget;
       const indicator = header.querySelector(".indicator");
       const index = parseInt(header.dataset.index + "");
-      const colName = (
-        /** @type {string} */
-        kvCache.columns[index].name
-      );
+      const colName = kvCache.columns[index].name;
       const currentOrder = kvCache.columns[index].order;
       if (currentOrder == ASC) {
         kvCache.columns[index].order = DESC;
