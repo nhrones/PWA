@@ -260,7 +260,7 @@ var KvClient = class {
       callProcedure(
         "SET",
         {
-          key: ["PWA"],
+          key: ["PWA", "1"],
           value
         }
       ).then((result) => {
