@@ -3,13 +3,10 @@ var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
 // src/constants.ts
-var DEV = false;
+var BYPASS_PIN = false;
+var DEV = true;
 var PIN = "";
 var setPin = /* @__PURE__ */ __name((pin) => PIN = pin, "setPin");
-var OrderDirection = {
-  ASC: "ASC",
-  DESC: "DESC"
-};
 
 // src/view/utils.ts
 var $ = /* @__PURE__ */ __name((id) => document.getElementById(id), "$");
@@ -20,20 +17,18 @@ var on = /* @__PURE__ */ __name((elem, event, listener) => {
 // src/view/editableTR.ts
 var focusedRow;
 var focusedCell;
-var selectedRowID = 0;
+var selectedCacheKey = "";
 var resetFocusedRow = /* @__PURE__ */ __name(() => {
-  const dbtn = $("deletebtn");
-  const abtn = $("addbtn");
-  dbtn.setAttribute("hidden", "");
-  abtn.removeAttribute("hidden");
+  const deleteBtn = $("deletebtn");
+  const addBtn = $("addbtn");
+  deleteBtn.setAttribute("hidden", "");
+  addBtn.removeAttribute("hidden");
   focusedRow = null;
 }, "resetFocusedRow");
 function makeEditableRow() {
   const rows = document.querySelectorAll("tr");
   for (const row of Array.from(rows)) {
-    if (row.className.startsWith("headerRow")) {
-      continue;
-    }
+    if (row.className.startsWith("headerRow")) continue;
     row.onclick = (e) => {
       const target = e.target;
       if (focusedRow && focusedCell && e.target != focusedCell) {
@@ -43,12 +38,12 @@ function makeEditableRow() {
       }
       focusedRow?.classList.remove("selected_row");
       focusedRow = row;
-      selectedRowID = parseInt(focusedRow.dataset.row_id + "");
+      selectedCacheKey = focusedRow.dataset.cache_key;
       focusedRow.classList.add("selected_row");
-      const abtn = $("addbtn");
-      abtn.setAttribute("hidden", "");
-      const dbtn = $("deletebtn");
-      dbtn.removeAttribute("hidden");
+      const addBtn = $("addbtn");
+      addBtn.setAttribute("hidden", "");
+      const deleteBtn = $("deletebtn");
+      deleteBtn.removeAttribute("hidden");
       if (target.attributes.getNamedItem("read-only")) {
         return;
       }
@@ -56,19 +51,28 @@ function makeEditableRow() {
       focusedCell.setAttribute("contenteditable", "");
       focusedCell.className = "editable ";
       focusedCell.onblur = () => {
-        const id = parseInt(focusedRow.dataset.row_id + "");
+        let key = focusedRow.dataset.cache_key;
         const col = focusedCell.dataset.column_id || 0;
-        const rowObj = kvCache.get(id);
+        const rowObj = kvCache.get(key);
         const currentValue = rowObj[col];
-        const newValue = focusedCell.textContent;
-        if (currentValue != newValue) {
-          rowObj[col] = newValue;
-          kvCache.set(id, rowObj, "editable makeEditableRow 81");
+        const thisValue = focusedCell.textContent;
+        if (currentValue !== thisValue) {
+          rowObj[col] = thisValue;
+          if (col === "host") {
+            const newKey = thisValue;
+            if (key !== newKey) {
+              kvCache.delete(key);
+              key = thisValue;
+              kvCache.set(key, rowObj);
+            }
+          }
+        } else {
+          kvCache.set(key, rowObj);
         }
       };
-      focusedCell.focus();
     };
   }
+  focusedCell?.focus();
 }
 __name(makeEditableRow, "makeEditableRow");
 
@@ -77,20 +81,17 @@ function buildFooter() {
   const addBtn = $("addbtn");
   addBtn.onclick = (_e) => {
     const newRow = Object.assign({}, kvCache.schema.sample);
-    if (newRow.id) {
-      newRow.id = kvCache.dbMap.size;
-    }
-    kvCache.set(newRow.id, newRow, "dom footer 63: ");
+    kvCache.set(newRow.host, newRow);
     buildDataTable();
     const table = $("table");
     const lastRow = table.rows[table.rows.length - 1];
     lastRow.scrollIntoView({ behavior: "smooth" });
-    const deleteBtn = $("deletebtn");
-    deleteBtn.onclick = (_e2) => {
-      const id = focusedRow.dataset.row_id;
-      kvCache.delete(parseInt(id + ""));
-      buildDataTable();
-    };
+  };
+  const deleteBtn = $("deletebtn");
+  deleteBtn.onclick = (_e) => {
+    const id = focusedRow.dataset.cache_key;
+    kvCache.delete(id);
+    buildDataTable();
   };
 }
 __name(buildFooter, "buildFooter");
@@ -129,7 +130,7 @@ var buildDataTable = /* @__PURE__ */ __name(() => {
   if (querySet) {
     for (let i = 0; i < querySet.length; i++) {
       const obj = querySet[i];
-      let row = `<tr data-row_id="${obj[kvCache.columns[0].name]} ">
+      let row = `<tr data-cache_key="${obj[kvCache.columns[0].name]}">
         `;
       for (let i2 = 0; i2 < kvCache.columns.length; i2++) {
         const ro = kvCache.columns[i2].readOnly ? " read-only" : "";
@@ -144,23 +145,6 @@ var buildDataTable = /* @__PURE__ */ __name(() => {
   buildFooter();
   makeEditableRow();
 }, "buildDataTable");
-
-// src/data/order.ts
-var orderData = /* @__PURE__ */ __name((column, direction) => {
-  if (DEV) console.log("running order for", column);
-  switch (direction) {
-    case OrderDirection.ASC:
-      if (DEV) console.log("running order-ASC for", column);
-      kvCache.querySet.sort((a, b) => a[column].toLowerCase() > b[column].toLowerCase() ? 1 : -1);
-      break;
-    case OrderDirection.DESC:
-      if (DEV) console.log("running order-DESC for", column);
-      kvCache.querySet.sort((a, b) => a[column].toLowerCase() < b[column].toLowerCase() ? 1 : -1);
-      break;
-    default:
-      break;
-  }
-}, "orderData");
 
 // src/data/kvClient.ts
 var DBServiceURL = DEV ? "http://localhost:9099/" : "https://ndh-kv-rpc.deno.dev/";
@@ -185,9 +169,8 @@ var KvClient = class {
     const eventSource = new EventSource(RegistrationURL);
     console.log("CONNECTING");
     eventSource.addEventListener("open", () => {
-      console.log("events.onopen - CONNECTED");
       callProcedure("GET", { key: ["PIN"] }).then((result) => {
-        const pin = xorEncrypt(atob(result.value));
+        const pin = xorEncrypt(result.value);
         setPin(pin);
         this.fetchQuerySet();
       });
@@ -206,7 +189,6 @@ var KvClient = class {
       }
     });
     eventSource.addEventListener("message", (evt) => {
-      if (DEV) console.info("sse-message event - ", evt.data);
       const parsed = JSON.parse(evt.data);
       const { txID, error, result } = parsed;
       if (txID === -1) {
@@ -225,26 +207,18 @@ var KvClient = class {
   handleMutation(result) {
     console.info(`Mutation event:`, result.type);
   }
-  /** fetch a querySet */
+  /** set Kv Pin */
   async setKvPin(rawpin) {
-    const pin = btoa(xorEncrypt(rawpin));
-    if (DEV) console.log("Setting Pin!");
-    await callProcedure(
-      "SET",
-      {
-        key: ["PIN"],
-        value: pin
-      }
-    ).then((_result) => {
-      if (DEV) console.log("Set PIN!");
+    const pin = xorEncrypt(rawpin);
+    await callProcedure("SET", { key: ["PIN"], value: pin }).then((_result) => {
+      if (DEV) console.log("Set PIN to: ", pin);
     });
   }
+  //sortedString = JSON.stringify([...sortedMap.entries()])
   /** fetch a querySet */
   async fetchQuerySet() {
-    if (DEV) console.log("Fetching data!");
     await callProcedure("GET", { key: ["PWA"] }).then((result) => {
-      if (DEV) console.log("Got result! ", result.key);
-      restoreCache(result.value, "kvClient.fetchQuerySet");
+      restoreCache(xorEncrypt(result.value));
     });
   }
   /** get row from key */
@@ -260,7 +234,7 @@ var KvClient = class {
       callProcedure(
         "SET",
         {
-          key: ["PWA", "1"],
+          key: ["PWA"],
           value
         }
       ).then((result) => {
@@ -274,7 +248,6 @@ var KvClient = class {
 };
 var callProcedure = /* @__PURE__ */ __name((procedure, params) => {
   const txID = nextMsgID++;
-  if (DEV) console.log(`RPC msg ${txID} called ${procedure} with ${params}`);
   return new Promise((resolve, reject) => {
     transactions.set(txID, (error, result) => {
       if (error)
@@ -288,15 +261,12 @@ var callProcedure = /* @__PURE__ */ __name((procedure, params) => {
     });
   });
 }, "callProcedure");
-function restoreCache(records, from) {
-  if (DEV) console.log(`kvClient restoreCache called from ${from}`);
-  const tasksObj = JSON.parse(records);
-  kvCache.dbMap = new Map(tasksObj);
+function restoreCache(records) {
+  const pwaObj = JSON.parse(records);
+  kvCache.dbMap = new Map(pwaObj);
   kvCache.persist();
-  if (DEV) console.log(`kvCache restored!`);
   const result = kvCache.hydrate();
   if (result == "ok") {
-    orderData("host", OrderDirection.ASC);
     buildDataTable();
   }
 }
@@ -312,36 +282,15 @@ function xorEncrypt(text) {
 __name(xorEncrypt, "xorEncrypt");
 
 // src/view/domEventHandlers.ts
-var { ASC, DESC } = OrderDirection;
 var popupDialog = $("popupDialog");
 var pinDialog = $("myDialog");
 var pinInput = $("pin");
 var popupText = $("popup_text");
 var pinTryCount = 0;
 var pinOK = false;
-var UP = "\u{1F53C}";
-var DOWN = "\u{1F53D}";
 function initDOMelements() {
   buildTableHead();
   for (let i = 0; i < kvCache.columns.length; i++) {
-    const el = $(`header${i + 1}`);
-    el.onclick = (e) => {
-      const header = e.currentTarget;
-      const indicator = header.querySelector(".indicator");
-      const index = parseInt(header.dataset.index + "");
-      const colName = kvCache.columns[index].name;
-      const currentOrder = kvCache.columns[index].order;
-      if (currentOrder == ASC) {
-        kvCache.columns[index].order = DESC;
-        orderData(colName, DESC);
-        if (indicator) indicator.textContent = UP;
-      } else if (currentOrder == DESC) {
-        kvCache.columns[index].order = ASC;
-        orderData(colName, ASC);
-        if (indicator) indicator.textContent = DOWN;
-      }
-      buildDataTable();
-    };
   }
   document.addEventListener("keydown", function(event) {
     if (event.ctrlKey && event.key === "b") {
@@ -399,7 +348,7 @@ function initDOMelements() {
       }
     }
   });
-  if (DEV) {
+  if (BYPASS_PIN) {
     pinOK = true;
   } else {
     pinDialog.showModal();
@@ -423,7 +372,7 @@ function restoreData() {
   fileload?.addEventListener("change", function() {
     const reader = new FileReader();
     reader.onload = function() {
-      restoreCache(reader.result, "domEventHandlers.restoreData");
+      restoreCache(reader.result);
       globalThis.location.reload();
     };
     reader.readAsText(fileload.files[0]);
@@ -443,13 +392,14 @@ var KvCache = class {
   callbacks;
   columns = [];
   kvClient;
-  dbMap = /* @__PURE__ */ new Map();
+  dbMap;
   raw = [];
   /** ctor */
   constructor(opts) {
     this.IDB_KEY = `${opts.schema.name}`;
     this.schema = opts.schema;
     this.callbacks = /* @__PURE__ */ new Map();
+    this.dbMap = /* @__PURE__ */ new Map();
     this.columns = this.buildColumnSchema(this.schema.sample);
     this.kvClient = new KvClient();
     this.kvClient.init();
@@ -474,14 +424,16 @@ var KvCache = class {
     return columns;
   }
   /**
-   * Persist the current dbMap to an IndexedDB using         
-   * our webworker. (takes ~ 90 ms for 100k records)    
+   * Persist the current dbMap to Kv   
    * This is called for any mutation of the dbMap (set/delete)
    */
-  persist() {
-    if (DEV) console.log(`persist called! `);
-    const valueString = JSON.stringify(Array.from(this.dbMap.entries()));
-    this.kvClient.set(valueString);
+  persist(order = false) {
+    if (order) {
+      this.dbMap = sortMap(this.dbMap);
+    }
+    const mapString = JSON.stringify(Array.from(this.dbMap.entries()));
+    const encrypted = xorEncrypt(mapString);
+    this.kvClient.set(encrypted);
   }
   /** hydrate a dataset from a single raw record stored in kvDB */
   hydrate() {
@@ -494,14 +446,24 @@ var KvCache = class {
   resetData() {
     this.querySet = [...this.raw];
   }
+  clean(what = null) {
+    const cleanMap = /* @__PURE__ */ new Map();
+    const keys = [...this.dbMap.keys()];
+    keys.forEach((value) => {
+      if (value !== what) {
+        cleanMap.set(value, this.dbMap.get(value));
+      }
+    });
+    this.dbMap = cleanMap;
+    this.persist(true);
+  }
   /** The `set` method mutates - will call the `persist` method. */
-  set(key, value, from) {
-    if (DEV) console.log(`${from} set key ${key} val ${JSON.stringify(value)}`);
+  set(key, value) {
     try {
       this.dbMap.set(key, value);
-      this.persist();
+      this.persist(true);
       this.hydrate();
-      return key.toString();
+      return key;
     } catch (e) {
       console.error("error setting ");
       return "Error " + e;
@@ -520,7 +482,7 @@ var KvCache = class {
   delete(key) {
     try {
       const result = this.dbMap.delete(key);
-      if (result === true) this.persist();
+      if (result === true) this.persist(true);
       this.hydrate();
       return result;
     } catch (e) {
@@ -528,14 +490,17 @@ var KvCache = class {
     }
   }
 };
+function sortMap(originalMap) {
+  return new Map([...originalMap.entries()].sort());
+}
+__name(sortMap, "sortMap");
 
 // src/main.ts
 var options = {
   schema: {
     name: "PWA",
     sample: {
-      id: -1,
-      host: "",
+      host: "XYZ",
       login: "",
       pw: "",
       remarks: ""
