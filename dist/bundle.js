@@ -4,7 +4,7 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 
 // src/constants.ts
 var BYPASS_PIN = false;
-var DEV = true;
+var DEV = false;
 var PIN = "";
 var setPin = /* @__PURE__ */ __name((pin) => PIN = pin, "setPin");
 
