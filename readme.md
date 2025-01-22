@@ -8,5 +8,7 @@
  - The cache data is persisted in KvDB using JSON.stringyfy()    
  - Any mutation to the cache triggers a flush of the full dataset to KvDB.    
 
+live at https://nhrones.github.io/PWA/
+
 ctrl + b = backup
 ctrl + r = restore
