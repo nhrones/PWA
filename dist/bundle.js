@@ -169,10 +169,15 @@ var KvClient = class {
     const eventSource = new EventSource(RegistrationURL);
     console.log("CONNECTING");
     eventSource.addEventListener("open", () => {
-      callProcedure("GET", { key: ["PIN"] }).then((result) => {
-        const pin = xorEncrypt(result.value);
-        setPin(pin);
-        this.fetchQuerySet();
+      console.log("setting pin");
+      this.setKvPin("3913").then(() => {
+        callProcedure("GET", { key: ["PIN"] }).then((result) => {
+          console.log("GET PIN ", result.value);
+          const pin = xorEncrypt(result.value);
+          console.log("GET PIN ", pin);
+          setPin(pin);
+          this.fetchQuerySet();
+        });
       });
     });
     eventSource.addEventListener("error", (_e) => {
@@ -211,7 +216,7 @@ var KvClient = class {
   async setKvPin(rawpin) {
     const pin = xorEncrypt(rawpin);
     await callProcedure("SET", { key: ["PIN"], value: pin }).then((_result) => {
-      if (DEV) console.log("Set PIN to: ", pin);
+      console.log(`Set PIN ${rawpin} to: `, pin);
     });
   }
   //sortedString = JSON.stringify([...sortedMap.entries()])
