@@ -5,6 +5,7 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
 // src/constants.ts
 var BYPASS_PIN = false;
 var DEV = false;
+var RUN_LOCAL = false;
 var PIN = "";
 var setPin = /* @__PURE__ */ __name((pin) => PIN = pin, "setPin");
 
@@ -147,7 +148,7 @@ var buildDataTable = /* @__PURE__ */ __name(() => {
 }, "buildDataTable");
 
 // src/data/kvClient.ts
-var DBServiceURL = DEV ? "http://localhost:9099/" : "https://ndh-kv-rpc.deno.dev/";
+var DBServiceURL = RUN_LOCAL ? "http://localhost:9099/" : "https://ndh-kv-rpc.deno.dev/";
 var RegistrationURL = DBServiceURL + "SSERPC/kvRegistration";
 var nextMsgID = 0;
 var transactions = /* @__PURE__ */ new Map();
@@ -169,15 +170,13 @@ var KvClient = class {
     const eventSource = new EventSource(RegistrationURL);
     console.log("CONNECTING");
     eventSource.addEventListener("open", () => {
-      console.log("setting pin");
-      this.setKvPin("3913").then(() => {
-        callProcedure("GET", { key: ["PIN"] }).then((result) => {
-          console.log("GET PIN ", result.value);
-          const pin = xorEncrypt(result.value);
-          console.log("GET PIN ", pin);
-          setPin(pin);
-          this.fetchQuerySet();
-        });
+      if (DEV) console.log("setting pin");
+      callProcedure("GET", { key: ["PIN"] }).then((result) => {
+        if (DEV) console.log("GET PIN ", result.value);
+        const pin = xorEncrypt(result.value);
+        if (DEV) console.log("GET PIN ", pin);
+        setPin(pin);
+        this.fetchQuerySet();
       });
     });
     eventSource.addEventListener("error", (_e) => {
