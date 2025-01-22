@@ -215,7 +215,7 @@ var KvClient = class {
   async setKvPin(rawpin) {
     const pin = xorEncrypt(rawpin);
     await callProcedure("SET", { key: ["PIN"], value: pin }).then((_result) => {
-      console.log(`Set PIN ${rawpin} to: `, pin);
+      if (DEV) console.log(`Set PIN ${rawpin} to: `, pin);
     });
   }
   //sortedString = JSON.stringify([...sortedMap.entries()])
@@ -432,6 +432,7 @@ var KvCache = class {
    * This is called for any mutation of the dbMap (set/delete)
    */
   persist(order = false) {
+    if (DEV) console.log("Persisting -> sorted? ", order);
     if (order) {
       this.dbMap = sortMap(this.dbMap);
     }
