@@ -2,7 +2,7 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-// src/eventBus.ts
+// src/signal.ts
 function buildEventBus() {
   const eventSubscriptions = /* @__PURE__ */ new Map();
   const newEventBus = {
@@ -41,10 +41,10 @@ function buildEventBus() {
   return newEventBus;
 }
 __name(buildEventBus, "buildEventBus");
-var Events = buildEventBus();
+var signal = buildEventBus();
 
 // src/data/kvClient.ts
-var RUN_LOCAL = false;
+var RUN_LOCAL = true;
 var DBServiceURL = RUN_LOCAL ? "http://localhost:9099/" : "https://kv-pwa-rpc.deno.dev/";
 var RegistrationURL = DBServiceURL + "SSERPC/kvRegistration";
 var nextMsgID = 0;
@@ -169,7 +169,7 @@ function restoreCache(records) {
   kvCache.persist();
   const result = kvCache.hydrate();
   if (result == "ok") {
-    Events.fire("buildDataTable", "", kvCache);
+    signal.fire("buildDataTable", "", kvCache);
   }
 }
 __name(restoreCache, "restoreCache");
@@ -213,12 +213,12 @@ var deleteBtn = document.getElementById("deletebtn");
 var addBtn = document.getElementById("addbtn");
 var focusedRow;
 var focusedCell;
-var selectedCacheKey = "";
-var resetFocusedRow = /* @__PURE__ */ __name(() => {
+function resetFocusedRow() {
   deleteBtn.setAttribute("hidden", "");
   addBtn.removeAttribute("hidden");
   focusedRow = null;
-}, "resetFocusedRow");
+}
+__name(resetFocusedRow, "resetFocusedRow");
 function makeEditableRow(kvCache2) {
   const rows = document.querySelectorAll("tr");
   for (const row of Array.from(rows)) {
@@ -232,7 +232,6 @@ function makeEditableRow(kvCache2) {
       }
       focusedRow?.classList.remove("selected_row");
       focusedRow = row;
-      selectedCacheKey = focusedRow.dataset.cache_key;
       focusedRow.classList.add("selected_row");
       addBtn.setAttribute("hidden", "");
       deleteBtn.removeAttribute("hidden");
@@ -268,31 +267,10 @@ function makeEditableRow(kvCache2) {
 }
 __name(makeEditableRow, "makeEditableRow");
 
-// src/view/domFooter.ts
-var addBtn2 = document.getElementById("addbtn");
-var deleteBtn2 = document.getElementById("deletebtn");
-var table = document.getElementById("table");
-function buildFooter(kvCache2) {
-  addBtn2.onclick = (_e) => {
-    const newRow = Object.assign({}, kvCache2.schema.sample);
-    kvCache2.set(newRow.host, newRow);
-    buildDataTable(kvCache2);
-    const lastRow = table.rows[table.rows.length - 1];
-    lastRow.scrollIntoView({ behavior: "smooth" });
-  };
-  deleteBtn2.onclick = (_e) => {
-    const id = focusedRow.dataset.cache_key;
-    kvCache2.delete(id);
-    buildDataTable(kvCache2);
-  };
-}
-__name(buildFooter, "buildFooter");
-
 // src/view/customDataTable.ts
-var { on } = Events;
 var tablehead = document.getElementById("table-head");
 var tableBody;
-var buildTableHead = /* @__PURE__ */ __name((kvCache2) => {
+function buildTableHead(kvCache2) {
   const tr = `
 <tr class="headerRow">
 `;
@@ -313,7 +291,8 @@ var buildTableHead = /* @__PURE__ */ __name((kvCache2) => {
   }
   tablehead.innerHTML += tr + th;
   tablehead.innerHTML += `</tr>`;
-}, "buildTableHead");
+}
+__name(buildTableHead, "buildTableHead");
 function buildDataTable(kvCache2) {
   if (!tableBody) {
     tableBody = document.getElementById("table-body");
@@ -339,13 +318,31 @@ function buildDataTable(kvCache2) {
   makeEditableRow(kvCache2);
 }
 __name(buildDataTable, "buildDataTable");
-on("buildDataTable", "", (cache) => {
+var addBtn2 = document.getElementById("addbtn");
+var deleteBtn2 = document.getElementById("deletebtn");
+var table = document.getElementById("table");
+function buildFooter(kvCache2) {
+  addBtn2.onclick = (_e) => {
+    const newRow = Object.assign({}, kvCache2.schema.sample);
+    kvCache2.set(newRow.host, newRow);
+    buildDataTable(kvCache2);
+    const lastRow = table.rows[table.rows.length - 1];
+    lastRow.scrollIntoView({ behavior: "smooth" });
+  };
+  deleteBtn2.onclick = (_e) => {
+    const id = focusedRow.dataset.cache_key;
+    kvCache2.delete(id);
+    buildDataTable(kvCache2);
+  };
+}
+__name(buildFooter, "buildFooter");
+signal.on("buildDataTable", "", (cache) => {
   buildDataTable(cache);
 });
 
 // src/view/domEvents.ts
 var $ = /* @__PURE__ */ __name((id) => document.getElementById(id), "$");
-var on2 = /* @__PURE__ */ __name((elem, event, listener) => {
+var on = /* @__PURE__ */ __name((elem, event, listener) => {
   return elem.addEventListener(event, listener);
 }, "on");
 var popupDialog = $("popupDialog");
@@ -354,7 +351,7 @@ var pinInput = $("pin");
 var popupText = $("popup_text");
 var pinTryCount = 0;
 var pinOK = false;
-function initEventHandlers(kvCache2, BYPASS_PIN2) {
+function initEventHandlers(kvCache2, BYPASS_PIN_INPUT) {
   buildTableHead(kvCache2);
   document.addEventListener("keydown", function(event) {
     if (event.ctrlKey && event.key === "b") {
@@ -368,15 +365,15 @@ function initEventHandlers(kvCache2, BYPASS_PIN2) {
       restoreData();
     }
   });
-  on2(popupDialog, "click", (event) => {
+  on(popupDialog, "click", (event) => {
     event.preventDefault();
     popupDialog.close();
   });
-  on2(popupDialog, "close", (event) => {
+  on(popupDialog, "close", (event) => {
     event.preventDefault();
     if (!pinOK) pinDialog.showModal();
   });
-  on2(popupDialog, "keyup", (event) => {
+  on(popupDialog, "keyup", (event) => {
     event.preventDefault();
     popupDialog.close();
     if (!pinOK) pinDialog.showModal();
@@ -386,7 +383,7 @@ function initEventHandlers(kvCache2, BYPASS_PIN2) {
       event.preventDefault();
     }
   });
-  on2(pinInput, "keyup", (event) => {
+  on(pinInput, "keyup", (event) => {
     event.preventDefault();
     const pinIn = pinInput;
     const pinDia = pinDialog;
@@ -413,7 +410,7 @@ function initEventHandlers(kvCache2, BYPASS_PIN2) {
       }
     }
   });
-  if (BYPASS_PIN2) {
+  if (BYPASS_PIN_INPUT) {
     pinOK = true;
   } else {
     pinDialog.showModal();
@@ -472,7 +469,7 @@ var KvCache = class {
   persist(order = false) {
     if (DEV) console.log("Persisting -> sorted? ", order);
     if (order) {
-      this.dbMap = sortMap(this.dbMap);
+      this.dbMap = new Map([...this.dbMap.entries()].sort());
     }
     const mapString = JSON.stringify(Array.from(this.dbMap.entries()));
     const encrypted = xorEncrypt(mapString);
@@ -482,7 +479,7 @@ var KvCache = class {
   hydrate() {
     this.raw = [...this.dbMap.values()];
     this.querySet = [...this.raw];
-    Events.fire("buildDataTable", "", this);
+    signal.fire("buildDataTable", "", this);
     return this.raw.length > 2 ? "ok" : "Not found";
   }
   /** resest the working querySet to original DB values */
@@ -533,15 +530,11 @@ var KvCache = class {
     }
   }
 };
-function sortMap(originalMap) {
-  return new Map([...originalMap.entries()].sort());
-}
-__name(sortMap, "sortMap");
 
 // src/main.ts
 var DEV = false;
 var PIN = "";
-var BYPASS_PIN = false;
+var BYPASS_PIN = true;
 var setPin = /* @__PURE__ */ __name((pin) => PIN = pin, "setPin");
 var options = {
   schema: {
