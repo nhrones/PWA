@@ -44,7 +44,7 @@ __name(buildEventBus, "buildEventBus");
 var signal = buildEventBus();
 
 // src/data/kvClient.ts
-var RUN_LOCAL = true;
+var RUN_LOCAL = false;
 var DBServiceURL = RUN_LOCAL ? "http://localhost:9099/" : "https://kv-pwa-rpc.deno.dev/";
 var RegistrationURL = DBServiceURL + "SSERPC/kvRegistration";
 var nextMsgID = 0;
@@ -534,7 +534,7 @@ var KvCache = class {
 // src/main.ts
 var DEV = false;
 var PIN = "";
-var BYPASS_PIN = true;
+var BYPASS_PIN = false;
 var setPin = /* @__PURE__ */ __name((pin) => PIN = pin, "setPin");
 var options = {
   schema: {
