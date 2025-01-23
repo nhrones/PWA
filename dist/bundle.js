@@ -175,7 +175,7 @@ var KvClient = class {
         if (DEV) console.log("GET PIN ", result.value);
         const pin = xorEncrypt(result.value);
         if (DEV) console.log("GET PIN ", pin);
-        setPin(pin);
+        setPin(result.value);
         this.fetchQuerySet();
       });
     });
@@ -294,8 +294,6 @@ var pinTryCount = 0;
 var pinOK = false;
 function initDOMelements() {
   buildTableHead();
-  for (let i = 0; i < kvCache.columns.length; i++) {
-  }
   document.addEventListener("keydown", function(event) {
     if (event.ctrlKey && event.key === "b") {
       event.preventDefault();
@@ -330,9 +328,10 @@ function initDOMelements() {
     event.preventDefault();
     const pinIn = pinInput;
     const pinDia = pinDialog;
-    if (event.key === "Enter" || pinIn.value === PIN) {
+    const ecriptedPin = xorEncrypt(pinIn.value);
+    if (event.key === "Enter" || ecriptedPin === PIN) {
       pinTryCount += 1;
-      if (pinIn.value === PIN) {
+      if (ecriptedPin === PIN) {
         pinIn.value = "";
         pinOK = true;
         pinDia.close();
