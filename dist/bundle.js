@@ -44,9 +44,6 @@ __name(buildEventBus, "buildEventBus");
 var signal = buildEventBus();
 
 // src/data/kvClient.ts
-var RUN_LOCAL = false;
-var DBServiceURL = RUN_LOCAL ? "http://localhost:9099/" : "https://kv-pwa-rpc.deno.dev/";
-var RegistrationURL = DBServiceURL + "SSERPC/kvRegistration";
 var nextMsgID = 0;
 var kvCache;
 var transactions = /* @__PURE__ */ new Map();
@@ -60,21 +57,23 @@ var KvClient = class {
   transactions;
   currentPage = 1;
   focusedRow = null;
-  constructor(cache) {
+  CTX;
+  constructor(cache, ctx) {
+    this.CTX = ctx;
     kvCache = cache;
     this.transactions = /* @__PURE__ */ new Map();
   }
   /** initialize our EventSource and fetch some data */
   init() {
-    const eventSource = new EventSource(RegistrationURL);
+    const eventSource = new EventSource(this.CTX.RegistrationURL);
     console.log("CONNECTING");
     eventSource.addEventListener("open", () => {
-      if (DEV) console.log("setting pin");
-      callProcedure("GET", { key: ["PIN"] }).then((result) => {
-        if (DEV) console.log("GET PIN ", result.value);
+      if (this.CTX.DEV) console.log("setting pin");
+      callProcedure(this.CTX.dbServiceURL, "GET", { key: ["PIN"] }).then((result) => {
+        if (this.CTX.DEV) console.log("GET PIN ", result.value);
         const pin = xorEncrypt(result.value);
-        if (DEV) console.log("GET PIN ", pin);
-        setPin(result.value);
+        if (this.CTX.DEV) console.log("GET PIN ", pin);
+        this.CTX.PIN = result.value;
         this.fetchQuerySet();
       });
     });
@@ -113,13 +112,13 @@ var KvClient = class {
   /** set Kv Pin */
   async setKvPin(rawpin) {
     const pin = xorEncrypt(rawpin);
-    await callProcedure("SET", { key: ["PIN"], value: pin }).then((_result) => {
-      if (DEV) console.log(`Set PIN ${rawpin} to: `, pin);
+    await callProcedure(this.CTX.dbServiceURL, "SET", { key: ["PIN"], value: pin }).then((_result) => {
+      if (this.CTX.DEV) console.log(`Set PIN ${rawpin} to: `, pin);
     });
   }
   /** fetch a querySet */
   async fetchQuerySet() {
-    await callProcedure("GET", { key: ["PWA"] }).then((result) => {
+    await callProcedure(this.CTX.dbServiceURL, "GET", { key: ["PWA"] }).then((result) => {
       restoreCache(xorEncrypt(result.value));
     });
   }
@@ -134,6 +133,7 @@ var KvClient = class {
   set(value) {
     try {
       callProcedure(
+        this.CTX.dbServiceURL,
         "SET",
         {
           key: ["PWA"],
@@ -148,7 +148,7 @@ var KvClient = class {
     }
   }
 };
-var callProcedure = /* @__PURE__ */ __name((procedure, params) => {
+var callProcedure = /* @__PURE__ */ __name((dbServiceURL, procedure, params) => {
   const txID = nextMsgID++;
   return new Promise((resolve, reject) => {
     transactions.set(txID, (error, result) => {
@@ -156,7 +156,7 @@ var callProcedure = /* @__PURE__ */ __name((procedure, params) => {
         return reject(new Error(error));
       resolve(result);
     });
-    fetch(DBServiceURL, {
+    fetch(dbServiceURL, {
       method: "POST",
       mode: "cors",
       body: JSON.stringify({ txID, procedure, params })
@@ -351,17 +351,17 @@ var pinInput = $("pin");
 var popupText = $("popup_text");
 var pinTryCount = 0;
 var pinOK = false;
-function initEventHandlers(kvCache2, BYPASS_PIN_INPUT) {
+function initEventHandlers(kvCache2) {
   buildTableHead(kvCache2);
   document.addEventListener("keydown", function(event) {
     if (event.ctrlKey && event.key === "b") {
       event.preventDefault();
-      if (DEV) console.log("Ctrl + B backup data");
+      if (kvCache2.CTX.DEV) console.log("Ctrl + B backup data");
       backupData(kvCache2);
     }
     if (event.ctrlKey && event.key === "r") {
       event.preventDefault();
-      if (DEV) console.log("Ctrl + R restore data");
+      if (kvCache2.CTX.DEV) console.log("Ctrl + R restore data");
       restoreData();
     }
   });
@@ -388,9 +388,9 @@ function initEventHandlers(kvCache2, BYPASS_PIN_INPUT) {
     const pinIn = pinInput;
     const pinDia = pinDialog;
     const ecriptedPin = xorEncrypt(pinIn.value);
-    if (event.key === "Enter" || ecriptedPin === PIN) {
+    if (event.key === "Enter" || ecriptedPin === kvCache2.CTX.PIN) {
       pinTryCount += 1;
-      if (ecriptedPin === PIN) {
+      if (ecriptedPin === kvCache2.CTX.PIN) {
         pinIn.value = "";
         pinOK = true;
         pinDia.close();
@@ -410,7 +410,7 @@ function initEventHandlers(kvCache2, BYPASS_PIN_INPUT) {
       }
     }
   });
-  if (BYPASS_PIN_INPUT) {
+  if (kvCache2.CTX.BYPASS_PIN) {
     pinOK = true;
   } else {
     pinDialog.showModal();
@@ -433,14 +433,17 @@ var KvCache = class {
   kvClient;
   dbMap;
   raw = [];
+  CTX;
   /** ctor */
-  constructor(opts) {
-    this.IDB_KEY = `${opts.schema.name}`;
-    this.schema = opts.schema;
+  //constructor(dbOptions: Record<string,any>, ctx: Record<string,any>) {
+  constructor(ctx) {
+    this.IDB_KEY = `${ctx.dbOptions.schema.name}`;
+    this.schema = ctx.dbOptions.schema;
+    this.CTX = ctx;
     this.callbacks = /* @__PURE__ */ new Map();
     this.dbMap = /* @__PURE__ */ new Map();
     this.columns = this.buildColumnSchema(this.schema.sample);
-    this.kvClient = new KvClient(this);
+    this.kvClient = new KvClient(this, ctx);
     this.kvClient.init();
   }
   /**
@@ -467,7 +470,7 @@ var KvCache = class {
    * This is called for any mutation of the dbMap (set/delete)
    */
   persist(order = false) {
-    if (DEV) console.log("Persisting -> sorted? ", order);
+    if (this.CTX.DEV) console.log("Persisting -> sorted? ", order);
     if (order) {
       this.dbMap = new Map([...this.dbMap.entries()].sort());
     }
@@ -532,24 +535,30 @@ var KvCache = class {
 };
 
 // src/main.ts
-var DEV = false;
-var PIN = "";
-var BYPASS_PIN = false;
-var setPin = /* @__PURE__ */ __name((pin) => PIN = pin, "setPin");
-var options = {
-  schema: {
-    name: "PWA",
-    sample: {
-      host: "XYZ",
-      login: "",
-      pw: "",
-      remarks: ""
+var LOCAL_DB = false;
+var ServiceURL = LOCAL_DB ? "http://localhost:9099/" : "https://kv-pwa-rpc.deno.dev/";
+var appContext = {
+  DEV: false,
+  // enable logging
+  BYPASS_PIN: false,
+  // bypass user PIN input?
+  dbServiceURL: ServiceURL,
+  // a local or remote URL
+  RegistrationURL: ServiceURL + "SSERPC/kvRegistration",
+  // reg URL 
+  PIN: "",
+  // Encrypted PIN from KvDB
+  dbOptions: {
+    // Data options for DB and UI
+    schema: {
+      name: "PWA",
+      sample: {
+        host: "XYZ",
+        login: "",
+        pw: "",
+        remarks: ""
+      }
     }
   }
 };
-initEventHandlers(new KvCache(options), BYPASS_PIN);
-export {
-  DEV,
-  PIN,
-  setPin
-};
+initEventHandlers(new KvCache(appContext));
