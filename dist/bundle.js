@@ -148,7 +148,7 @@ var buildDataTable = /* @__PURE__ */ __name(() => {
 }, "buildDataTable");
 
 // src/data/kvClient.ts
-var DBServiceURL = RUN_LOCAL ? "http://localhost:9099/" : "https://ndh-kv-rpc.deno.dev/";
+var DBServiceURL = RUN_LOCAL ? "http://localhost:9099/" : "https://kv-pwa-rpc.deno.dev/";
 var RegistrationURL = DBServiceURL + "SSERPC/kvRegistration";
 var nextMsgID = 0;
 var transactions = /* @__PURE__ */ new Map();
