@@ -588,7 +588,7 @@ var appContext = {
     schema: {
       dbKey: "PWA",
       sample: {
-        host: "XYZ",
+        host: "Z",
         login: "",
         pw: "",
         remarks: ""
