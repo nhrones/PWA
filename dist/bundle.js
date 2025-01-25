@@ -88,12 +88,15 @@ function makeEditableRow(kvCache) {
       focusedCell.onblur = () => {
         let key = focusedRow.dataset.cache_key;
         const col = focusedCell.dataset.column_id || 0;
+        const columnIndex = focusedCell.dataset.column_index || 0;
+        console.log(`focusedCell.onblur key: ${key} col: ${col}, columnIndex ${columnIndex}`);
+        console.info("kvCache", kvCache.dbMap);
         const rowObj = kvCache.get(key);
         const currentValue = rowObj[col];
         const thisValue = focusedCell.textContent;
         if (currentValue !== thisValue) {
           rowObj[col] = thisValue;
-          if (col === "host") {
+          if (columnIndex === 0) {
             const newKey = thisValue;
             if (key !== newKey) {
               kvCache.delete(key);
@@ -146,7 +149,7 @@ function buildDataTable(kvCache) {
   if (querySet) {
     for (let i = 0; i < querySet.length; i++) {
       const obj = querySet[i];
-      let row = `<tr data-cache_key="${obj[kvCache.columns[0].name]}">
+      let row = `<tr data-column_index=${i} data-cache_key="${obj[kvCache.columns[0].name]}">
         `;
       for (let i2 = 0; i2 < kvCache.columns.length; i2++) {
         const ro = kvCache.columns[i2].readOnly ? " read-only" : "";
@@ -176,7 +179,9 @@ var table = document.getElementById("table");
 function buildFooter(kvCache) {
   addBtn2.onclick = (_e) => {
     const newRow = Object.assign({}, kvCache.schema.sample);
-    kvCache.set(newRow.host, newRow);
+    const firstColName = Object.keys(newRow)[0];
+    console.log(`setting new row key ${newRow[firstColName]}`);
+    kvCache.set(newRow[firstColName], newRow);
     buildDataTable(kvCache);
     const lastRow = table.rows[table.rows.length - 1];
     lastRow.scrollIntoView({ behavior: "smooth" });
@@ -471,7 +476,7 @@ var KvCache = class {
   restoreCache(records) {
     const pwaObj = JSON.parse(records);
     this.dbMap = new Map(pwaObj);
-    this.persist();
+    this.persist(true);
     const result = this.hydrate();
     if (result == "ok") {
       signals.fire("buildDataTable", "", this);
@@ -500,7 +505,7 @@ var KvCache = class {
    * Persist the current dbMap to Kv   
    * This is called for any mutation of the dbMap (set/delete)
    */
-  persist(order = false) {
+  persist(order = true) {
     if (this.DEV) console.log("Persisting -> sorted? ", order);
     if (order) {
       this.dbMap = new Map([...this.dbMap.entries()].sort());
@@ -566,12 +571,13 @@ var KvCache = class {
 };
 
 // src/main.ts
+var BOOL = false;
 var appContext = {
-  BYPASS_PIN: false,
+  BYPASS_PIN: BOOL,
   // bypass user PIN input?
-  DEV: false,
+  DEV: BOOL,
   // enable logging
-  LOCAL_DB: false,
+  LOCAL_DB: BOOL,
   // run from local dataService
   LocalDbURL: "http://localhost:9099/",
   RemoteDbURL: "https://kv-pwa-rpc.deno.dev/",
