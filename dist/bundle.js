@@ -123,7 +123,7 @@ function buildTableHead(kvCache) {
     if (i === 1) {
       th += `    <th id="header${i + 1}" 
    data-index=${i} value=1> ${kvCache.columns[i].name} 
-   <span class="indicator">\u{1F53D}</span>
+
 </th>
 `;
     } else {
@@ -156,6 +156,14 @@ function buildDataTable(kvCache) {
       row += "</tr>";
       tableBody.innerHTML += row;
     }
+  }
+  for (let i = 0; i < kvCache.columns.length; i++) {
+    const el = document.getElementById(`header${i + 1}`);
+    el.onclick = (_e) => {
+      console.log(`header ${el.id} clicked`);
+      resetFocusedRow();
+      buildDataTable(kvCache);
+    };
   }
   resetFocusedRow();
   buildFooter(kvCache);
